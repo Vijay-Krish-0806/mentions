@@ -88,26 +88,40 @@ function ensureItemIsVisible(selectedItem) {
 
 //after clicking the mention in dropdown, to handle that "mention" (highlighting)
 function handleUsername(username) {
-  let comment = commentField.innerHTML;
-  let index = comment.lastIndexOf("@");
-
-  //comment text before @ position
-  const beforeAtPos = comment.substring(0, index);
-  //comment text after @ position
-  let afterCurPos = comment.substring(index + currentQuery.length + 1);
-  //adding before + mention( a span here) + after
-  commentField.innerHTML = `${beforeAtPos}<span contenteditable="false" class="mention">${username}</span>${afterCurPos}`;
-
-  //after mentioning
+  // Get the current content
+  const fullContent = commentField.innerHTML;
+  
+  // Split the content precisely at the mention start position
+  const beforeMention = fullContent.substring(0, mentionStart);
+  const afterMentionStart = fullContent.substring(mentionStart);
+  
+  // Find the @ + query in the afterMentionStart part
+  const queryWithAt = "@" + currentQuery;
+  
+  // Replace only the first occurrence of @query in the afterMentionStart part
+  const afterMentionFixed = afterMentionStart.replace(queryWithAt, 
+    `<span contenteditable="false" class="mention">${username}</span> `);
+  
+  // Create the new content
+  const newContent = beforeMention + afterMentionFixed;
+  
+  // Update the content
+  commentField.innerHTML = newContent;
+  
+  // Hide dropdown
   dropdown.style.display = "none";
-
-  // Try to place cursor at the end of the inserted mention
+  
+  // Place cursor at the end
   const range = document.createRange();
   const selection = window.getSelection();
   range.selectNodeContents(commentField);
   range.collapse(false);
   selection.removeAllRanges();
   selection.addRange(range);
+  
+  // Reset mention tracking variables
+  mentionStart = -1;
+  currentQuery = "";
 }
 
 //to display the typed comment below

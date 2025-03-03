@@ -87,28 +87,42 @@ function ensureItemIsVisible(selectedItem) {
 }
 
 //after clicking the mention in dropdown, to handle that "mention" (highlighting)
-function handleUsername(username) {
   // Get the current content
+function handleUsername(username){
   const fullContent = commentField.innerHTML;
-  
+
+  // Get the current selection and cursor position
+  const cursorInfo = saveCursorPosition();
+  if (!cursorInfo) return;
+
   // Split the content precisely at the mention start position
   const beforeMention = fullContent.substring(0, mentionStart);
   const afterMentionStart = fullContent.substring(mentionStart);
-  
-  // Find the @ + query in the afterMentionStart part
-  const queryWithAt = "@" + currentQuery;
-  
-  // Replace only the first occurrence of @query in the afterMentionStart part
-  const afterMentionFixed = afterMentionStart.replace(queryWithAt, 
-    `<span contenteditable="false" class="mention">${username}</span> `);
-  
-  // Create the new content
-  const newContent = beforeMention + afterMentionFixed;
-  
+
+  // Check if there's any content after the @ symbol
+  const queryLength = currentQuery.length;
+
+  // Find where the query portion ends in the afterMentionStart
+  // This is more precise than a simple replace which might affect emails
+  let endOfMention = mentionStart + 1 + queryLength; // +1 for the @ symbol
+
+  // Extract the exact string we need to replace
+  const exactReplacement = fullContent.substring(mentionStart, endOfMention);
+
+  // Create the new content by careful replacement
+  let newContent = beforeMention;
+  newContent += `<span contenteditable="false" class="mention">${username}</span> `;
+  newContent += fullContent.substring(endOfMention);
+
   // Update the content
   commentField.innerHTML = newContent;
-  
+
   // Hide dropdown
+  dropdown.style.display = "none";
+
+  // Calculate the new cursor position - right after the inserted mention
+  const cursorPos = beforeMention.length + 
+    `<span contenteditable="false" class="mention">${username}</span> `.length;
   dropdown.style.display = "none";
   
   // Place cursor at the end

@@ -3,19 +3,17 @@ const dropdown = document.querySelector(".users-dropdown");
 const commentField = document.querySelector(".comment-field");
 const commentBtn = document.querySelector(".comment-button");
 const showComments = document.querySelector(".showComments");
-
 // Set initial focus
 commentField.focus();
-
 // State tracking variables
 let selectedIndex = -1;
 let mentionStart = -1;
 let currentQuery = "";
 
+//initial function to make dropdown for all available users
 function makeDropDown(usersList) {
   dropdown.innerHTML = "";
   selectedIndex = -1;
-
   usersList.forEach((user, i) => {
     const li = document.createElement("li");
     const img = document.createElement("img");
@@ -27,11 +25,15 @@ function makeDropDown(usersList) {
     li.appendChild(img);
     li.appendChild(document.createTextNode(`${user.username}`));
     li.dataset.index = i;
-
     dropdown.append(li);
   });
 }
+makeDropDown(users);
 
+//li elements of all users for filtering further
+const usersList = document.querySelectorAll(".users-dropdown li");
+
+//to know cursor pointer position and text
 function saveCursorPosition() {
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
@@ -48,25 +50,7 @@ function saveCursorPosition() {
   return null;
 }
 
-function calculateCaretCoords() {
-  const selection = window.getSelection();
-  if (selection.rangeCount === 0) return { top: 0, left: 0 };
-
-  const range = selection.getRangeAt(0).cloneRange();
-  const tempSpan = document.createElement("span");
-  tempSpan.textContent = "@";
-  range.insertNode(tempSpan);
-
-  const rect = tempSpan.getBoundingClientRect();
-  tempSpan.parentNode.removeChild(tempSpan);
-  const fieldRect = commentField.getBoundingClientRect();
-
-  return {
-    top: `${rect.top - fieldRect.top - dropdown.offsetHeight - 10}px`,
-    left: `${rect.left - fieldRect.left - 25}px`,
-  };
-}
-
+//to find starting position of @
 function findMentionStartPosition(text, cursorPosition) {
   for (let i = cursorPosition - 1; i >= 0; i--) {
     if (text[i] === "@") {
@@ -78,6 +62,7 @@ function findMentionStartPosition(text, cursorPosition) {
   return -1;
 }
 
+//to highlight selected items from dropdown
 function highlightSelectedItem(items) {
   items.forEach((item, index) => {
     if (index === selectedIndex) {
@@ -89,6 +74,7 @@ function highlightSelectedItem(items) {
   });
 }
 
+//to make scroll when keydown/up whenever needed
 function ensureItemIsVisible(selectedItem) {
   const dropdownRect = dropdown.getBoundingClientRect();
   const itemRect = selectedItem.getBoundingClientRect();
@@ -100,36 +86,33 @@ function ensureItemIsVisible(selectedItem) {
   }
 }
 
+//after clicking the mention in dropdown, to handle that "mention" (highlighting)
 function handleUsername(username) {
   let comment = commentField.innerHTML;
   let index = comment.lastIndexOf("@");
 
-  // Only replace the @query part, not everything after it
+  //comment text before @ position
   const beforeAtPos = comment.substring(0, index);
+  //comment text after @ position
   let afterCurPos = comment.substring(index + currentQuery.length + 1);
+  //adding before + mention( a span here) + after
+  commentField.innerHTML = `${beforeAtPos}<span contenteditable="false" class="mention">${username}</span>${afterCurPos}`;
 
-  commentField.innerHTML = `${beforeAtPos}<span contenteditable="false" class="mention">${username}</span> ${afterCurPos}`;
+  //after mentioning
   dropdown.style.display = "none";
 
-  // Set focus back to comment field
-  commentField.focus();
-
   // Try to place cursor at the end of the inserted mention
-  const selection = window.getSelection();
   const range = document.createRange();
-  const mentions = commentField.querySelectorAll(".mention");
-
-  // Find the mention we just added (likely the last one)
-  if (mentions.length > 0) {
-    const lastMention = mentions[mentions.length - 1];
-    range.setStartAfter(lastMention);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
+  const selection = window.getSelection();
+  range.selectNodeContents(commentField);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
+//to display the typed comment below
 function handleComment(event) {
+  //if comment field is empty return
   if (!commentField.innerHTML.trim()) {
     commentField.innerHTML = `Please comment something!!`;
     setTimeout(() => {
@@ -141,29 +124,30 @@ function handleComment(event) {
   const div = document.createElement("div");
   div.classList.add("individual-comment");
 
-  // Get current date
+  //date- to know when comment is created
   const today = new Date();
   const dateOnly = today.toLocaleDateString();
 
-  // Extract mentions from spans (avoiding duplicates)
+  // Extract mentions from spans (avoiding duplicates) (to show all mentions)
   const mentions = new Set();
   commentField.querySelectorAll(".mention").forEach((mention) => {
     mentions.add(mention.textContent.trim());
   });
 
-  // Create elements for structured comment
+  // Create different elements for structured comment
+
+  //this is to know who actually commented (in this case me )
   const commenterDiv = document.createElement("div");
   const img = document.createElement("img");
   img.src = "boy.png";
   img.alt = `My avatar`;
   commenterDiv.appendChild(img);
   const textNode = document.createTextNode(`Vijay - ${dateOnly}`);
-
   commenterDiv.appendChild(textNode);
   commenterDiv.classList.add("commenter-info");
-
   commenterDiv.textNode = `Vijay - ${dateOnly}`;
 
+  // to show all mentions
   const mentionsDiv = document.createElement("div");
   mentionsDiv.classList.add("mentions-list");
   mentionsDiv.textContent =
@@ -171,6 +155,7 @@ function handleComment(event) {
       ? `Mentions: ${[...mentions].join(", ")}`
       : "Mentions: None";
 
+  // to show actual comment
   const commentTextDiv = document.createElement("div");
   commentTextDiv.classList.add("comment-text");
   commentTextDiv.innerHTML = "Comment: " + commentField.innerHTML;
@@ -187,46 +172,57 @@ function handleComment(event) {
   commentField.focus();
 }
 
-// Initialize dropdown with all users
-makeDropDown(users);
-
 // EVENT HANDLERS
+
+//cpmment field event (input)
 commentField.addEventListener("input", function (e) {
   const cursorInfo = saveCursorPosition();
+  // console.log(cursorInfo);
   if (!cursorInfo) return;
 
-  const value = commentField.textContent;
-  if (!value) {
+  const commentValue = commentField.textContent;
+  const commentLength = commentValue.length;
+  if (!commentValue) {
     dropdown.style.display = "none";
     return;
   }
 
-  // Find @ before cursor
   mentionStart = findMentionStartPosition(cursorInfo.text, cursorInfo.position);
 
   if (mentionStart >= 0) {
-    // Get query text after @
-    currentQuery = cursorInfo.text
-      .substring(mentionStart + 1, cursorInfo.position)
-      .toLowerCase()
-      .trim();
+    const isAtStart = mentionStart === 0;
+    const isAtEnd = mentionStart === commentLength - 1;
 
-    if (mentionStart === cursorInfo.position - 1 || currentQuery) {
-      // Filter users based on query
-      const filteredUsers = users.filter((user) =>
-        user.username.toLowerCase().includes(currentQuery)
-      );
+    // Use regex for consistent whitespace detection
+    const hasSpaceBefore =
+      isAtStart || /\s/.test(commentValue[mentionStart - 1]);
 
-      if (filteredUsers.length > 0) {
-        makeDropDown(filteredUsers);
-        dropdown.style.display = "block";
-        const { top, left } = calculateCaretCoords();
-        dropdown.style.position = "absolute";
-        dropdown.style.top = top;
-        dropdown.style.left = left;
-      } else {
-        dropdown.style.display = "none";
-      }
+    // Check if cursor is right after @ or if we have a query
+    const isCursorAfterAt = cursorInfo.position > mentionStart;
+
+    if (isAtStart || isAtEnd || hasSpaceBefore) {
+      // Find the next space after the cursor position
+      const nextSpaceIndex = commentValue.indexOf(" ", mentionStart + 1);
+      const endPosition =
+        nextSpaceIndex === -1 ? commentLength : nextSpaceIndex;
+
+      // Extract query from @ to next space or end
+      currentQuery = commentValue
+        .substring(mentionStart + 1, endPosition)
+        .toLowerCase()
+        .trim();
+
+      let hasMatches = false;
+
+      usersList.forEach((user) => {
+        const match = user.textContent.toLowerCase().includes(currentQuery);
+        user.style.display = match ? "flex" : "none";
+        if (match) hasMatches = true;
+      });
+
+      dropdown.style.display = hasMatches ? "block" : "none";
+    } else {
+      dropdown.style.display = "none";
     }
   } else {
     dropdown.style.display = "none";
@@ -238,7 +234,6 @@ commentField.addEventListener("keydown", function (e) {
   if (dropdown.style.display === "block") {
     const items = dropdown.querySelectorAll(".list-item");
     if (items.length === 0) return;
-
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
@@ -264,6 +259,7 @@ commentField.addEventListener("keydown", function (e) {
         }
         break;
 
+      //to close dropdown when Escape key is pressed
       case "Escape":
         e.preventDefault();
         dropdown.style.display = "none";
@@ -272,6 +268,7 @@ commentField.addEventListener("keydown", function (e) {
   }
 });
 
+//event deligation on dropdown so when user clicks on li it gets mentioned
 dropdown.addEventListener("click", function (event) {
   const listItem = event.target.closest(".list-item");
   if (!listItem) return;
@@ -280,4 +277,38 @@ dropdown.addEventListener("click", function (event) {
   handleUsername(username);
 });
 
+//when comment button is clicked
 commentBtn.addEventListener("click", handleComment);
+
+//to close dropdown when user clicks outside of dropdown
+function closeDropdown() {
+  dropdown.style.display = "none";
+  // document.removeEventListener("click", handleClickOutside);
+}
+document.addEventListener("click", function (event) {
+  if (
+    !dropdown.contains(event.target) &&
+    !commentField.contains(event.target)
+  ) {
+    closeDropdown();
+  }
+});
+
+// function calculateCaretCoords() {
+//   const selection = window.getSelection();
+//   if (selection.rangeCount === 0) return { top: 0, left: 0 };
+
+//   const range = selection.getRangeAt(0).cloneRange();
+//   const tempSpan = document.createElement("span");
+//   tempSpan.textContent = "@";
+//   range.insertNode(tempSpan);
+
+//   const rect = tempSpan.getBoundingClientRect();
+//   tempSpan.parentNode.removeChild(tempSpan);
+//   const fieldRect = commentField.getBoundingClientRect();
+
+//   return {
+//     top: `${rect.top - fieldRect.top - dropdown.offsetHeight - 10}px`,
+//     left: `${rect.left - fieldRect.left - 25}px`,
+//   };
+// }

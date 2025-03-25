@@ -1,30 +1,30 @@
 export const users = [
   {
     id: 1,
-    userImg: "man.jpg",
+    userImg: "man.png",
     username: "User 1",
   },
   {
     id: 2,
-    userImg: "woman.jpg",
+    userImg: "woman.png",
     username: "Dummy 2",
   },
   {
     id: 3,
-    userImg: "man.jpg",
+    userImg: "man.png",
     username: "User 3",
   },
   {
     id: 4,
-    userImg: "woman.jpg",
+    userImg: "woman.png",
     username: "Dummy 4",
   },
   {
     id: 5,
-    userImg: "man.jpg",
+    userImg: "man.png",
     username: "User 5",
   },
-    userImg: "nature.jpg",
+    userImg: "nature.png",
     username: "Anonymous",
   },
 ];

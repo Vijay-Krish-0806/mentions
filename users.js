@@ -23,8 +23,5 @@ export const users = [
     id: 5,
     userImg: "man.png",
     username: "User 5",
-  },
-    userImg: "nature.png",
-    username: "Anonymous",
-  },
+  }
 ];

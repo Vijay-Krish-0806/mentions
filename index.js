@@ -2,7 +2,7 @@ import { users } from "./users.js";
 const dropdown = document.querySelector(".users-dropdown");
 const commentField = document.querySelector(".comment-field");
 const commentBtn = document.querySelector(".comment-button");
-const showComments = document.querySelector(".showComments");
+const showComments = document.querySelector(".show-comments");
 // Set initial focus
 commentField.focus();
 // State tracking variables
@@ -47,6 +47,7 @@ function saveCursorPosition() {
       range: range,
     };
   }
+
   return null;
 }
 
@@ -78,7 +79,6 @@ function highlightSelectedItem(items) {
 function ensureItemIsVisible(selectedItem) {
   const dropdownRect = dropdown.getBoundingClientRect();
   const itemRect = selectedItem.getBoundingClientRect();
-
   if (itemRect.top < dropdownRect.top) {
     dropdown.scrollTop += itemRect.top - dropdownRect.top;
   } else if (itemRect.bottom > dropdownRect.bottom) {
@@ -87,55 +87,24 @@ function ensureItemIsVisible(selectedItem) {
 }
 
 //after clicking the mention in dropdown, to handle that "mention" (highlighting)
-  // Get the current content
-function handleUsername(username){
-  const fullContent = commentField.innerHTML;
-
-  // Get the current selection and cursor position
-  const cursorInfo = saveCursorPosition();
-  if (!cursorInfo) return;
-
-  // Split the content precisely at the mention start position
-  const beforeMention = fullContent.substring(0, mentionStart);
-  const afterMentionStart = fullContent.substring(mentionStart);
-
-  // Check if there's any content after the @ symbol
-  const queryLength = currentQuery.length;
-
-  // Find where the query portion ends in the afterMentionStart
-  // This is more precise than a simple replace which might affect emails
-  let endOfMention = mentionStart + 1 + queryLength; // +1 for the @ symbol
-
-  // Extract the exact string we need to replace
-  const exactReplacement = fullContent.substring(mentionStart, endOfMention);
-
-  // Create the new content by careful replacement
-  let newContent = beforeMention;
-  newContent += `<span contenteditable="false" class="mention">${username}</span> `;
-  newContent += fullContent.substring(endOfMention);
-
-  // Update the content
-  commentField.innerHTML = newContent;
-
-  // Hide dropdown
+function handleUsername(username) {
+  let comment = commentField.innerHTML;
+  let index = comment.lastIndexOf("@");
+  //comment text before @ position
+  const beforeAtPos = comment.substring(0, index);
+  //comment text after @ position
+  let afterCurPos = comment.substring(index + currentQuery.length + 1);
+  //adding before + mention( a span here) + after
+  commentField.innerHTML = `${beforeAtPos}<span contenteditable="false" class="mention">${username}</span>${afterCurPos}`;
+  //after mentioning
   dropdown.style.display = "none";
-
-  // Calculate the new cursor position - right after the inserted mention
-  const cursorPos = beforeMention.length + 
-    `<span contenteditable="false" class="mention">${username}</span> `.length;
-  dropdown.style.display = "none";
-  
-  // Place cursor at the end
+  // Try to place cursor at the end of the inserted mention
   const range = document.createRange();
   const selection = window.getSelection();
   range.selectNodeContents(commentField);
   range.collapse(false);
   selection.removeAllRanges();
   selection.addRange(range);
-  
-  // Reset mention tracking variables
-  mentionStart = -1;
-  currentQuery = "";
 }
 
 //to display the typed comment below
@@ -151,11 +120,9 @@ function handleComment(event) {
 
   const div = document.createElement("div");
   div.classList.add("individual-comment");
-
   //date- to know when comment is created
   const today = new Date();
   const dateOnly = today.toLocaleDateString();
-
   // Extract mentions from spans (avoiding duplicates) (to show all mentions)
   const mentions = new Set();
   commentField.querySelectorAll(".mention").forEach((mention) => {
@@ -186,28 +153,21 @@ function handleComment(event) {
   // to show actual comment
   const commentTextDiv = document.createElement("div");
   commentTextDiv.classList.add("comment-text");
-  commentTextDiv.innerHTML = "Comment: " + commentField.innerHTML;
-
+  commentTextDiv.innerHTML = "Comment: " + commentField.innerHTML.trim();
   div.appendChild(commenterDiv);
   div.appendChild(mentionsDiv);
   div.appendChild(commentTextDiv);
-
   // Append comment to the comment section
   showComments.appendChild(div);
-
   // Clear comment field and reset
   commentField.innerHTML = "";
   commentField.focus();
 }
-
 // EVENT HANDLERS
-
 //cpmment field event (input)
 commentField.addEventListener("input", function (e) {
   const cursorInfo = saveCursorPosition();
-  // console.log(cursorInfo);
   if (!cursorInfo) return;
-
   const commentValue = commentField.textContent;
   const commentLength = commentValue.length;
   if (!commentValue) {
@@ -216,27 +176,19 @@ commentField.addEventListener("input", function (e) {
   }
 
   mentionStart = findMentionStartPosition(cursorInfo.text, cursorInfo.position);
+  console.log(mentionStart);
 
   if (mentionStart >= 0) {
     const isAtStart = mentionStart === 0;
     const isAtEnd = mentionStart === commentLength - 1;
-
     // Use regex for consistent whitespace detection
     const hasSpaceBefore =
       isAtStart || /\s/.test(commentValue[mentionStart - 1]);
 
-    // Check if cursor is right after @ or if we have a query
-    const isCursorAfterAt = cursorInfo.position > mentionStart;
-
     if (isAtStart || isAtEnd || hasSpaceBefore) {
-      // Find the next space after the cursor position
-      const nextSpaceIndex = commentValue.indexOf(" ", mentionStart + 1);
-      const endPosition =
-        nextSpaceIndex === -1 ? commentLength : nextSpaceIndex;
-
       // Extract query from @ to next space or end
       currentQuery = commentValue
-        .substring(mentionStart + 1, endPosition)
+        .substring(mentionStart + 1, cursorInfo.position)
         .toLowerCase()
         .trim();
 
@@ -321,22 +273,3 @@ document.addEventListener("click", function (event) {
     closeDropdown();
   }
 });
-
-// function calculateCaretCoords() {
-//   const selection = window.getSelection();
-//   if (selection.rangeCount === 0) return { top: 0, left: 0 };
-
-//   const range = selection.getRangeAt(0).cloneRange();
-//   const tempSpan = document.createElement("span");
-//   tempSpan.textContent = "@";
-//   range.insertNode(tempSpan);
-
-//   const rect = tempSpan.getBoundingClientRect();
-//   tempSpan.parentNode.removeChild(tempSpan);
-//   const fieldRect = commentField.getBoundingClientRect();
-
-//   return {
-//     top: `${rect.top - fieldRect.top - dropdown.offsetHeight - 10}px`,
-//     left: `${rect.left - fieldRect.left - 25}px`,
-//   };
-// }
